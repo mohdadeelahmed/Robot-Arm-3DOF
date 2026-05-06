@@ -12,6 +12,14 @@ class RobotArm {
     Servo servoWrist;
     Servo servoGripper;
 
+    // --- CALIBRATION OFFSETS ---
+    // Change these values when you physically mount the servo horns.
+    // If the math says "0 degrees" (straight out), but your servo needs
+    // to be at "90" to physically point straight out, set the offset to 90.
+    float shoulderOffset = 90.0; 
+    float elbowOffset = 0.0;     
+    float wristOffset = 90.0;    
+
   public:
     // Pass in the kinematics solver and attach pins
     RobotArm(Kinematics* mathEngine, int pinS, int pinE, int pinW, int pinG) {
@@ -28,11 +36,21 @@ class RobotArm {
         JointAngles result = solver->calculateAngles(target);
 
         if (result.reachable) {
-            // Write to servos. You might need to map or offset these values 
-            // depending on how you mount the physical servo horns.
-            servoShoulder.write(result.shoulder);
-            servoElbow.write(result.elbow);
-            servoWrist.write(result.wrist);
+            // Apply physical offsets to the raw mathematical angles
+            float physShoulder = result.shoulder + shoulderOffset;
+            float physElbow = result.elbow + elbowOffset;
+            float physWrist = result.wrist + wristOffset;
+
+            // Constrain bounds to strictly 0 to 180 to prevent servo damage
+            physShoulder = constrain(physShoulder, 0, 180);
+            physElbow = constrain(physElbow, 0, 180);
+            physWrist = constrain(physWrist, 0, 180);
+
+            // Write safe, mapped angles to hardware
+            servoShoulder.write(physShoulder);
+            servoElbow.write(physElbow);
+            servoWrist.write(physWrist);
+            
             return true;
         } else {
             Serial.println("Error: Target coordinates are out of physical reach!");
@@ -43,9 +61,9 @@ class RobotArm {
     // Simple open/close command for the claw
     void setGripper(bool open) {
         if (open) {
-            servoGripper.write(90); // Adjust this angle for your specific claw
+            servoGripper.write(90); // Adjust this angle for your specific claw open state
         } else {
-            servoGripper.write(10); // Adjust this angle for your specific claw
+            servoGripper.write(10); // Adjust this angle for your specific claw closed state
         }
     }
 };
