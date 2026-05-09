@@ -1,5 +1,7 @@
 # Inverse Kinematics for 2-Link Robotic Arm
 
+![Complete Inverse Kinematics Geometric Proof](./docs/ik_proof.JPG)
+
 ## System Constants
 The arm consists of two primary segments. The lengths are measured from their exact axes of rotation to ensure mathematical accuracy, with $L_2$ accounting for the physical offset of the claw.
 
