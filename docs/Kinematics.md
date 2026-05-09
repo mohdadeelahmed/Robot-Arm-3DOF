@@ -2,7 +2,7 @@
 
 This system utilizes Kinematic Decoupling. By specifying a target coordinate $(X, Y)$ and a desired approach angle $(\phi)$, we calculate the wrist joint's position first. Reducing the 3-link problem into a standard 2-link geometric calculation for the shoulder and elbow.
 
-![Complete Inverse Kinematics Geometric Proof](./docs/ik_proof.JPG)
+![Proof](./ik_proof.JPG)
 
 ## System Constants
 Lengths are measured between the exact axes of rotation in millimeters.
