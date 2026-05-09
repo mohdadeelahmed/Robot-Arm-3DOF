@@ -1,43 +1,44 @@
-# Inverse Kinematics for 2-Link Robotic Arm
+# Inverse Kinematics for 3-DOF Planar Robot Arm
+
+This system utilizes Kinematic Decoupling. By specifying a target coordinate $(X, Y)$ and a desired approach angle $(\phi)$, we calculate the wrist joint's position first. Reducing the 3-link problem into a standard 2-link geometric calculation for the shoulder and elbow.
 
 ![Complete Inverse Kinematics Geometric Proof](./docs/ik_proof.JPG)
 
 ## System Constants
-The arm consists of two primary segments. The lengths are measured from their exact axes of rotation to ensure mathematical accuracy, with $L_2$ accounting for the physical offset of the claw.
+Lengths are measured between the exact axes of rotation in millimeters.
 
-* **$L_1$ (Shoulder to Elbow):** 97.4 mm
-* **$L_2$ (Elbow to End Effector):** 222.9 mm
+* **$L_1$ (Shoulder to Elbow):** 97.37 mm
+* **$L_2$ (Elbow to Wrist):** 86.93 mm
+* **$L_3$ (Wrist to End Effector):** 147.90 mm
 
-## 1. Safety and Reachability Check
-Before calculating joint angles, the system must verify if the target coordinate $(X, Y)$ is physically reachable. Attempting to reach an impossible coordinate will result in a fatal math error (calculating the square root of a negative number) and potential hardware damage.
+## 1. Kinematic Decoupling (Wrist Position)
+Given the target $(X, Y)$ and approach angle $\phi$ , the required position of the wrist joint $(W_x, W_y)$ is found by moving backward from the end effector.
 
-The straight-line distance to the target is defined as:
-$$ D = \sqrt{X^2 + Y^2} $$
+$$W_x = X - L_3 \cos(\phi)$$
 
-The target is valid only if it falls within the physical limits of the arms:
-$$ |L_1 - L_2| \le D \le (L_1 + L_2) $$
-$$ 125.5 \text{ mm} \le D \le 320.3 \text{ mm} $$
-
-If $D$ falls outside this range, the firmware aborts the movement command.
+$$W_y = Y - L_3 \sin(\phi)$$
 
 ## 2. Elbow Angle ($\theta_2$) Calculation
-We use the Law of Cosines to determine the elbow angle required to reach the target $(X, Y)$.
+With the wrist position known, the Law of Cosines is used to solve the 2-link chain formed by $L_1$ and $L_2$.
 
-$$ \cos(\theta_2) = \frac{X^2 + Y^2 - L_1^2 - L_2^2}{2 L_1 L_2} $$
+$$\cos(\theta_2) = \frac{W_x^2 + W_y^2 - L_1^2 - L_2^2}{2 L_1 L_2}$$
 
-Substituting the system constants:
-$$ \cos(\theta_2) = \frac{X^2 + Y^2 - (97.4)^2 - (222.9)^2}{2(97.4)(222.9)} $$
-$$ \cos(\theta_2) = \frac{X^2 + Y^2 - 59171.17}{43421.16} $$
-
-To find the final angle in radians:
-$$ \theta_2 = \arccos \left( \frac{X^2 + Y^2 - 59171.17}{43421.16} \right) $$
+$$\theta_2 = \arccos(\cos(\theta_2))$$
 
 ## 3. Shoulder Angle ($\theta_1$) Calculation
-With the elbow angle solved, we calculate the shoulder angle by combining the angle to the target coordinate with the inner geometry of the arm linkage.
+The shoulder angle is calculated by finding the angle to the wrist coordinate and subtracting the inner triangle geometry formed by the elbow bend.
 
-$$ \theta_1 = \text{atan2}(Y, X) - \text{atan2}(L_2 \sin(\theta_2), L_1 + L_2 \cos(\theta_2)) $$
+$$k_1 = L_1 + L_2 \cos(\theta_2)$$
 
-Substituting the system constants:
-$$ \theta_1 = \text{atan2}(Y, X) - \text{atan2}(222.9 \sin(\theta_2), 97.4 + 222.9 \cos(\theta_2)) $$
+$$k_2 = L_2 \sin(\theta_2)$$
 
-*Note: The firmware converts the final $\theta_1$ and $\theta_2$ radian values into degrees before transmitting the PWM signals to the hardware.*
+$$\theta_1 = \text{atan2}(W_y, W_x) - \text{atan2}(k_2, k_1)$$
+
+## 4. Wrist Angle ($\theta_3$) Calculation
+The wrist servo angle is calculated to ensure the end effector maintains the requested global approach angle $\phi$, compensating for the rotation of the shoulder and elbow.
+
+$$\theta_3 = \phi - \theta_1 - \theta_2$$
+
+Substituting the system constants: 
+
+$$\theta_1 = \text{atan2}(Y, X) - \text{atan2}(222.9 \sin(\theta_2), 97.4 + 222.9 \cos(\theta_2))$$
